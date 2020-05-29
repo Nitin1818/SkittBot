@@ -11,7 +11,7 @@ from telegram.utils.helpers import mention_html
 
 from tg_bot import dispatcher, BAN_STICKER
 from tg_bot.modules.disable import DisableAbleCommandHandler
-from tg_bot.modules.helper_funcs.chat_status import is_user_admin, bot_admin, user_admin_no_reply, user_admin, \
+from tg_bot.modules.helper_funcs.chat_status import is_user_admin, bot_admin, user_admin, \
     can_restrict
 from tg_bot.modules.helper_funcs.extraction import extract_text, extract_user_and_text, extract_user
 from tg_bot.modules.helper_funcs.filters import CustomFilters
@@ -21,7 +21,7 @@ from tg_bot.modules.log_channel import loggable
 from tg_bot.modules.sql import warns_sql as sql
 
 WARN_HANDLER_GROUP = 9
-CURRENT_WARNING_FILTER_STRING = "<b>Current warning filters in this chat:</b>\n"
+CURRENT_WARNING_FILTER_STRING = "*Current warning filters in this chat:*\n"
 
 
 # Not async
@@ -48,7 +48,7 @@ def warn(user: User, chat: Chat, reason: str, message: Message, warner: User = N
             reply = "{} warnings, {} has been banned!".format(limit, mention_html(user.id, user.first_name))
 
         for warn_reason in reasons:
-            reply += "\n - {}".format(html.escape(warn_reason))
+            reply += "\n • {}".format(html.escape(warn_reason))
 
         message.bot.send_sticker(chat.id, BAN_STICKER)  # Really makes you think sticker
         keyboard = []
@@ -93,7 +93,7 @@ def warn(user: User, chat: Chat, reason: str, message: Message, warner: User = N
 
 
 @run_async
-@user_admin_no_reply
+@user_admin
 @bot_admin
 @loggable
 def button(bot: Bot, update: Update) -> str:
@@ -118,7 +118,7 @@ def button(bot: Bot, update: Update) -> str:
                                                                 user_member.user.id)
         else:
             update.effective_message.edit_text(
-                "User has already has no warns.".format(mention_html(user.id, user.first_name)),
+                "User {} has already no warns.".format(mention_html(user.id, user.first_name)),
                 parse_mode=ParseMode.HTML)
 
     return ""
@@ -186,7 +186,7 @@ def warns(bot: Bot, update: Update, args: List[str]):
         if reasons:
             text = "This user has {}/{} warnings, for the following reasons:".format(num_warns, limit)
             for reason in reasons:
-                text += "\n - {}".format(reason)
+                text += "\n • {}".format(reason)
 
             msgs = split_message(text)
             for msg in msgs:
@@ -226,7 +226,8 @@ def add_warn_filter(bot: Bot, update: Update):
 
     sql.add_warn_filter(chat.id, keyword, content)
 
-    update.effective_message.reply_text("Warn handler added for '{}'!".format(keyword))
+    update.effective_message.reply_text("Warn handler added for '`{}`'!".format(keyword),
+                                        parse_mode=ParseMode.MARKDOWN)
     raise DispatcherHandlerStop
 
 
@@ -256,7 +257,8 @@ def remove_warn_filter(bot: Bot, update: Update):
     for filt in chat_filters:
         if filt == to_remove:
             sql.remove_warn_filter(chat.id, to_remove)
-            msg.reply_text("Yep, I'll stop warning people for that.")
+            msg.reply_text("Yep, I'll stop warning people for `{}`.".format(to_remove),
+                           parse_mode=ParseMode.MARKDOWN)
             raise DispatcherHandlerStop
 
     msg.reply_text("That's not a current warning filter - run /warnlist for all active warning filters.")
@@ -273,15 +275,15 @@ def list_warn_filters(bot: Bot, update: Update):
 
     filter_list = CURRENT_WARNING_FILTER_STRING
     for keyword in all_handlers:
-        entry = " - {}\n".format(html.escape(keyword))
+        entry = " • `{}`\n".format(html.escape(keyword))
         if len(entry) + len(filter_list) > telegram.MAX_MESSAGE_LENGTH:
-            update.effective_message.reply_text(filter_list, parse_mode=ParseMode.HTML)
+            update.effective_message.reply_text(filter_list, parse_mode=ParseMode.MARKDOWN)
             filter_list = entry
         else:
             filter_list += entry
 
     if not filter_list == CURRENT_WARNING_FILTER_STRING:
-        update.effective_message.reply_text(filter_list, parse_mode=ParseMode.HTML)
+        update.effective_message.reply_text(filter_list, parse_mode=ParseMode.MARKDOWN)
 
 
 @run_async
