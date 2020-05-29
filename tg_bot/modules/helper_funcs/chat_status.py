@@ -13,6 +13,7 @@ def can_delete(chat: Chat, bot_id: int) -> bool:
 def is_user_ban_protected(chat: Chat, user_id: int, member: ChatMember = None) -> bool:
     if chat.type == 'private' \
             or user_id in SUDO_USERS \
+            or user_id == 777000 \
             or user_id in WHITELIST_USERS \
             or chat.all_members_are_administrators:
         return True
@@ -108,25 +109,6 @@ def bot_admin(func):
 
 
 def user_admin(func):
-    @wraps(func)
-    def is_admin(bot: Bot, update: Update, *args, **kwargs):
-        user = update.effective_user  # type: Optional[User]
-        if user and is_user_admin(update.effective_chat, user.id):
-            return func(bot, update, *args, **kwargs)
-
-        elif not user:
-            pass
-
-        elif DEL_CMDS and " " not in update.effective_message.text:
-            update.effective_message.delete()
-
-        else:
-            update.effective_message.reply_text("Who dis non-admin telling me what to do?")
-
-    return is_admin
-
-
-def user_admin_no_reply(func):
     @wraps(func)
     def is_admin(bot: Bot, update: Update, *args, **kwargs):
         user = update.effective_user  # type: Optional[User]
